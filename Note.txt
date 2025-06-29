@@ -1,0 +1,53 @@
+Ecco una panoramica della logica di ogni cartella e file nel tuo progetto:
+
+Cartella src/controllers/
+
+
+Gestisce l’orchestrazione e il flusso principale dell’applicazione.
+orchestrator.py:
+Avvia il consumer Kafka, riceve i messaggi, li passa ai parser, crea i job, li invia a Kafka, salva i dati su Impala/Postgres e gestisce i commit.
+Cartella src/services/
+
+
+Contiene la logica di business e le trasformazioni dati.
+job_builder.py:
+Crea un job con ID univoco, prepara il payload e lo invia al topic Kafka dell’orchestratore.
+parser.py:
+(Non mostrato, ma tipicamente si occupa di interpretare/parsing dei messaggi ricevuti da Kafka.)
+Cartella src/models/
+
+
+Gestisce l’accesso e la persistenza dei dati verso i database.
+postgres_module.py:
+Salva i dati grezzi ricevuti su una tabella Postgres.
+impala_module.py:
+(Non mostrato, ma tipicamente salva/recupera dati da Impala.)
+Cartella src/utils/
+
+
+Contiene utility e configurazioni condivise.
+config.py:
+Gestisce la configurazione centralizzata tramite variabili d’ambiente (Kafka, Postgres, Impala, logging).
+logger.py:
+(Non mostrato, ma tipicamente fornisce una funzione per configurare e ottenere logger personalizzati.)
+File di root e altri
+
+
+requirements.txt:
+Elenca le dipendenze Python del progetto.
+
+Dockerfile:
+Definisce l’immagine Docker per l’applicazione.
+
+docker-compose.yml:
+Orchetra i servizi necessari (Kafka, Zookeeper, Postgres, Impala, ecc.) per l’ambiente di sviluppo.
+
+test_job_builder.py:
+Contiene test unitari per le funzioni di job_builder.py.
+
+In sintesi:
+controllers: orchestrazione e entrypoint.
+services: logica di business e trasformazione dati.
+models: accesso e persistenza dati.
+utils: configurazione e strumenti comuni.
+Ogni file ha una responsabilità chiara e separata, secondo una variante del pattern MVC.
