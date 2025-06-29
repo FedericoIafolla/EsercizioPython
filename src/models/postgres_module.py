@@ -11,6 +11,7 @@ def save_to_postgres(raw_data):
     Salva il payload JSON grezzo nella colonna 'payload' della tabella
     """
     try:
+        # Mi collego al database Postgres usando i parametri di configurazione
         conn = psycopg2.connect(
             host=Config.POSTGRES_HOST,
             port=Config.POSTGRES_PORT,
@@ -20,17 +21,19 @@ def save_to_postgres(raw_data):
         )
         cur = conn.cursor()
 
-        # MODIFICA QUI: inserisci i byte grezzi direttamente
+        # Inserisco direttamente i dati grezzi (byte o stringa JSON) nella colonna 'payload'
         cur.execute(
             "INSERT INTO processed_data (payload) VALUES (%s)",
-            [raw_data]  # usa i dati grezzi invece di json.dumps
+            [raw_data]
         )
 
+        # Confermo la scrittura sul database
         conn.commit()
         cur.close()
         conn.close()
         logger.info("Dati RAW salvati su Postgres")
         return True
     except Exception as e:
+        # Se qualcosa va storto, scrivo l'errore nei log e restituisco False
         logger.error(f"Errore Postgres: {e}")
         return False

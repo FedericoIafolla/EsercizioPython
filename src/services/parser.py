@@ -2,7 +2,7 @@ import json
 import xml.etree.ElementTree as ET
 import base64
 import magic
-from src.utils import config
+from src.utils import Config
 from src.utils.logger import setup_logger
 
 # Imposto il logger per questo modulo
