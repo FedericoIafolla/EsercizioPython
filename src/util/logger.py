@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from src.utils.config import Config
+from src.util.config import Config
 
 
 def setup_logger(name):

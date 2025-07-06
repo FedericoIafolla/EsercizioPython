@@ -3,7 +3,7 @@ import os
 
 class Config:
     # Kafka
-    KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+    KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9093')
     ORCHESTRATOR_TOPIC = os.getenv('ORCHESTRATOR_TOPIC', 'orchestrator_topic')
     JOB_ORCHESTRATOR_TOPIC = os.getenv('JOB_ORCHESTRATOR_TOPIC', 'job_orchestrator_topic')
 

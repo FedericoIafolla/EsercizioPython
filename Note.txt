@@ -51,3 +51,71 @@ services: logica di business e trasformazione dati.
 models: accesso e persistenza dati.
 utils: configurazione e strumenti comuni.
 Ogni file ha una responsabilità chiara e separata, secondo una variante del pattern MVC.
+
+
+
+
+
+--------------------------------------
+
+
+
+1. Il motore che genera i manifest Kubernetes
+Pensate a un foglio bianco: prima avevamo manifest statici sparsi qua e là, ora abbiamo un unico generatore.
+
+Ho creato un modulo cronjob_builder.py sotto src/service, che ospita la funzione generate_cronjob_manifest(config).
+
+Questa funzione legge la configurazione TSC – frequenza, immagine Docker, comandi, volumi – e sputa fuori un YAML pronto all’uso.
+
+In pratica, ogni volta che leggiamo una riga di configurazione da Impala, chiamiamo questo generatore e otteniamo il nostro CronJob, senza più template sparsi.
+
+Così, quando cambierà qualcosa (un parametro o l’immagine), modifichiamo un solo punto e tutto si aggiorna di conseguenza.
+
+🔒 2. Salvare le configurazioni in Impala in modo sicuro
+Vogliamo essere certi che ogni configurazione finisca nella nostra tabella TSC senza rischi di SQL injection o di errori silenziosi.
+
+Nel file impala_module.py ho aggiunto upsert_tsc_configuration(record).
+
+Questa funzione prende un dizionario con i campi obbligatori – tsc_id, customer_id, report_type, frequency, last_run, timestamp, status, creation_timestamp – e li inserisce o aggiorna con una singola query parametrizzata.
+
+Se qualcosa va storto, catturiamo l’errore, lo logghiamo con dettaglio e risaliamo immediatamente il problema.
+
+In questo modo ogni configurazione viene garantita sul database, senza backdoor per iniezioni e con controllo completo degli errori.
+
+🔄 3. Il client REST più robusto e attento
+Quando chiamiamo il servizio remoto che ci restituisce la configurazione TSC, vogliamo essere sicuri di avere dati validi e di non cadere alla prima rete ballerina.
+
+In tsc_config_client.py ho reso l’URL dinamico, mettendo customerId e tscId nella path, invece di parametri fissi e rigidi.
+
+Una volta ottenuto il JSON, estraggo e valido i campi essenziali – report_type, frequency e via dicendo – e sollevo un errore se manca qualcosa, così non ci perdiamo in null pointer a valle.
+
+Ho aggiunto un retry con backoff esponenziale: se la chiamata fallisce (timeout, 5xx), riprovo dopo 1 secondo, poi 2, poi 4, fino a un numero massimo di tentativi.
+
+Questa strategia ci protegge da guasti temporanei e ci assicura sempre dati completi e corretti.
+
+🛠 4. L’orchestrator che capisce CREATE e UPDATE
+Infine, immaginiamo il nostro orchestrator come un direttore d’orchestra: deve sapere quando suonare “CREATE” e quando “UPDATE”.
+
+In orchestrator.py sfrutto la funzione parse_message per leggere dal messaggio Kafka tre cose fondamentali: operation, customerId, tscId.
+
+Ho introdotto un Command Handler Pattern: un dizionario che associa "CREATE" a handle_create e "UPDATE" a handle_update.
+
+Quando arriva un messaggio, guardo operation, scelgo il handler giusto e lo eseguo.
+
+Inoltre, per sicurezza e chiarezza, uso Pydantic per definire e validare i modelli dei payload: così sono certo al 100% che nel messaggio ci siano tutti i campi giusti, con il formato giusto.
+
+Questo approccio rende l’orchestrator facile da estendere: se un giorno avremo una nuova operazione, basterà aggiungere un nuovo handler, senza stravolgere nulla.
+
+In conclusione, con queste quattro mosse abbiamo trasformato il nostro progetto:
+
+un generatore unico per i CronJob,
+
+una persistenza TSC in Impala sicura e trasparente,
+
+un client REST resiliente e validato,
+
+un orchestrator modulare e a prova di futuro.
+
+Il risultato è un’architettura più pulita, più sicura e pronta a crescere con noi. Grazie per l’attenzione!
+
+

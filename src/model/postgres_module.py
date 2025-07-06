@@ -1,7 +1,7 @@
 import psycopg2
 import json
-from src.utils import Config
-from src.utils.logger import setup_logger
+from src.util import Config
+from src.util.logger import setup_logger
 
 logger = setup_logger('postgres_module')
 
