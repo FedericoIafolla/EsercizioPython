@@ -1,0 +1,100 @@
+Passo 1: Avvio del Servizio
+Il modulo principale (orchestrator.py) viene eseguito. Esso:
+
+Inizializza un logger tramite setup_logger() (da logger.py)
+
+Chiama start_consumer() per avviare il ciclo principale di consumo messaggi
+
+Passo 2: Connessione a Kafka
+create_consumer() (in kafka_consumer.py):
+
+Legge le configurazioni da Config (config.py)
+
+Crea un consumer Kafka connesso al topic specificato (ORCHESTRATOR_TOPIC)
+
+Restituisce un consumer attivo pronto a ricevere messaggi
+
+Passo 3: Ricezione e Dispatch Messaggio
+poll_message() (in kafka_consumer.py):
+
+Interroga Kafka con timeout di 1 secondo
+
+Se riceve un messaggio, lo passa a process_message() in orchestrator.py
+(process_message è il coordinatore centrale che gestisce tutto il flusso di elaborazione)
+
+Passo 4: Parsing e Validazione
+parse_message() (in parser.py):
+
+Converte il messaggio binario in dizionario Python
+
+Verifica i campi obbligatori (operation, customerId, tscId)
+
+Se valido, restituisce il payload per l'elaborazione
+
+Passo 5: Recupero Configurazione TSC
+get_tsc_configuration() (in tsc_config_client.py):
+
+Costruisce l'URL con build_url() usando customerId e tscId
+
+Esegue chiamata REST con ritentativi esponenziali (max 3 tentativi)
+
+Filtra solo i campi rilevanti e li valida con validate_config()
+
+Restituisce la configurazione completa
+
+Passo 6: Salvataggio Configurazione
+upsert_tsc_configuration() (in impala_module.py):
+
+Verifica i campi obbligatori per Impala
+
+Crea un writer Impala connesso al cluster specificato
+
+Esegue query UPSERT sulla tabella tsc_configurations
+
+Passo 7: Generazione CronJob
+create_job() (in cronjob_builder.py):
+
+Converte la frequenza in sintassi cron con frequency_to_cron()
+
+Genera manifesto Kubernetes YAML con generate_cronjob_manifest()
+
+Invia il job al topic JOB_ORCHESTRATOR_TOPIC via Kafka
+
+Passo 8: Backup Dati in Impala
+save_to_impala() (in impala_module.py):
+
+Verifica che il payload sia un dizionario valido
+
+Utilizza ImpalaWriter (da impala_writer.py)
+
+Esegue INSERT nella tabella processed_data
+
+Passo 9: Conferma Messaggio
+
+Il consumer committa l'offset Kafka (msg.consumer.commit(msg))
+
+Il messaggio viene rimosso dalla coda
+
+Log di conferma con offset del messaggio
+
+Passo 10: Gestione Errori
+
+Eccezioni registrate nel logger con contesto dettagliato
+
+Dead-letter queue (TODO): messaggi falliti inviati a coda secondaria
+
+Consumer rimane attivo per nuovi messaggi
+
+Flusso Integrato in 1 Minuto
+"Quando arriva un messaggio Kafka, l'orchestratore: (1) Lo converte in JSON e valida i campi obbligatori, (2) Recupera la configurazione completa via REST, (3) Salva i metadati in Impala, (4) Genera un CronJob Kubernetes, (5) Archivia il payload completo in Impala, e (6) Conferma l'elaborazione a Kafka. Ogni passaggio è isolato in moduli specializzati (parser, config client, Impala writer) per massima flessibilità."
+
+Glossario Breve
+ImpalaWriter (impala_writer.py): Classe che gestisce connessioni e query a Impala
+
+frequency_to_cron (cronjob_builder.py): Convertitore frequenza testuale → sintassi cron
+
+validate_config (tsc_config_client.py): Guardia che verifica i campi obbligatori
+
+OPERATION_HANDLERS (orchestrator.py): Mappa operazioni → funzioni di gestione
+
+Questa architettura garantisce separazione dei compiti, facilità di debug e scalabilità orizzontale.
