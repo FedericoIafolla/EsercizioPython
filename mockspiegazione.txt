@@ -1,0 +1,77 @@
+  Cosa sono i "Mock"? (L'analogia del set cinematografico)
+
+  Immagina di essere il regista di un film. Devi girare una scena in cui l'attore principale guida una
+  macchina sportiva.
+
+   * Scenario Reale: Potresti usare una vera macchina sportiva, su una vera strada, con l'attore che guida
+     davvero. Ma è costoso, pericoloso e difficile da controllare (e se l'attore non sa guidare?).
+   * Scenario con "Mock": Invece, sul set, usi una finta macchina (un "mock"). L'attore si siede dentro, fa
+     finta di guidare, e tu muovi la telecamera e aggiungi effetti speciali per far sembrare che stia
+     guidando. La finta macchina non fa nulla di reale, ma ti permette di testare la scena (l'attore, la
+     telecamera, le luci) in un ambiente controllato.
+
+  In programmazione, un mock è esattamente questo: un oggetto finto che simula il comportamento di un
+  oggetto reale. Non fa il lavoro vero, ma risponde alle chiamate come se lo facesse, permettendoti di
+  testare il codice che interagisce con esso.
+
+  Perché usiamo i "Mock" nei Test? (I vantaggi pratici)
+
+  Usiamo i mock per rendere i nostri test:
+
+   1. Isolati: Vogliamo testare solo un pezzo di codice alla volta (es. una singola funzione o classe). Se
+      quella funzione dipende da un database, un servizio esterno o un'API, non vogliamo che il test si
+      connetta davvero a questi sistemi. Il mock ci permette di "fingere" che la dipendenza funzioni, isolando
+      il codice che stiamo testando.
+   2. Veloci: Connettersi a un database, fare una chiamata di rete o avviare un servizio richiede tempo. I mock
+       rispondono istantaneamente, rendendo i test molto più rapidi.
+   3. Controllabili: Possiamo far sì che un mock si comporti esattamente come vogliamo: che restituisca dati
+      specifici, che sollevi un errore, che non faccia nulla. Questo ci permette di testare tutti i possibili
+      scenari (successo, fallimento, casi limite) in modo prevedibile.
+   4. Affidabili: I test che dipendono da sistemi esterni sono "fragili". Se il database è offline, o l'API
+      cambia, il test fallisce anche se il nostro codice è corretto. I mock eliminano queste dipendenze
+      esterne, rendendo i test più stabili.
+   5. Senza Effetti Collaterali: Un test non dovrebbe mai modificare dati reali in un database di produzione o
+      inviare email vere. I mock impediscono che ciò accada.
+
+  Come sono stati creati e usati i "Mock" nei nostri Test? (Esempi pratici)
+
+  Nei test che abbiamo scritto, abbiamo usato i mock in diversi modi:
+
+   * `test_config.py` (Configurazione):
+       * Abbiamo usato monkeypatch per "fingere" che esistessero delle variabili d'ambiente (os.getenv).
+         Invece di impostare variabili d'ambiente reali sul tuo sistema (che potrebbero influenzare altri
+         programmi), abbiamo detto al test: "Quando il codice chiede questa variabile d'ambiente, dagli questo
+          valore finto".
+
+   * `test_cronjob_builder.py` (Generazione CronJob e Kafka):
+       * Abbiamo mockato il Producer di Kafka. Invece di inviare messaggi reali a Kafka, abbiamo verificato
+         che il metodo produce() del nostro mock fosse chiamato con i dati corretti e che flush() fosse
+         chiamato. Questo testa la logica di invio senza toccare Kafka.
+
+   * `test_impala_writer.py` e `test_postgres_module.py` (Interazione con Database):
+       * Abbiamo mockato le funzioni di connessione al database (impala.dbapi.connect, psycopg2.connect) e gli
+          oggetti cursor. Questo ci ha permesso di testare che le query SQL fossero costruite correttamente e
+         che i metodi execute() e commit() fossero chiamati, senza doverci connettere a un vero database
+         Impala o PostgreSQL.
+
+   * `test_cronjob_applier.py` (Applicazione CronJob su Kubernetes):
+       * Abbiamo mockato il client Kubernetes (kubernetes.client.BatchV1Api). Invece di connetterci a un
+         cluster Kubernetes reale, abbiamo simulato che i metodi read_namespaced_cron_job(),
+         create_namespaced_cron_job() e replace_namespaced_cron_job() fossero chiamati con i manifest YAML
+         corretti.
+
+   * `test_tsc_config_client.py` (Client API REST):
+       * Abbiamo mockato requests.get. Invece di fare una vera chiamata HTTP a un servizio REST, abbiamo fatto
+          in modo che il mock restituisse una risposta JSON predefinita (simulando successo o fallimento).
+         Abbiamo anche mockato time.sleep per testare la logica di retry senza dover aspettare realmente.
+
+   * `test_orchestrator.py` (Orchestratore):
+       * Questo è il caso più complesso. L'orchestratore coordina molti altri moduli. Per testarlo, abbiamo
+         mockato tutte le sue dipendenze (parser, tsc_config_client, impala_module, cronjob_builder,
+         cronjob_applier, kafka_consumer). Questo ci ha permesso di verificare che l'orchestratore chiamasse
+         le funzioni giuste, nell'ordine giusto, con i dati giusti, senza che nessuna di queste chiamate
+         andasse a toccare sistemi reali.
+
+  In sintesi, i mock sono i nostri "sostituti" intelligenti. Ci permettono di testare il nostro codice in
+  modo rapido, affidabile e controllato, simulando il comportamento di tutto ciò che il nostro codice non
+  dovrebbe toccare direttamente durante un test.
