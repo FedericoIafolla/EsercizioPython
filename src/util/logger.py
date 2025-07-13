@@ -5,19 +5,18 @@ from src.util.config import Config
 
 
 def setup_logger(name):
-    # Creo un logger con il nome che mi serve
     logger = logging.getLogger(name)
-    logger.setLevel(Config.LOG_LEVEL)
 
-    # Imposto il formato del log (data, nome, livello, messaggio)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # Convert string log level to integer constant
+    log_level_str = Config.LOG_LEVEL.upper()
+    log_level = getattr(logging, log_level_str, logging.INFO)
+    logger.setLevel(log_level)
 
-    # Mando i log sull'output standard (es. terminale)
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
+    # Add handler only if it doesn't already have one to prevent duplicate messages
+    if not logger.handlers:
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
-    # Aggiungo l'handler al logger
-    logger.addHandler(handler)
-
-    # Restituisco il logger pronto da usare
     return logger

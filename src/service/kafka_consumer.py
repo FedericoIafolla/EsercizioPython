@@ -1,4 +1,4 @@
-from confluent_kafka import Consumer, KafkaError
+from confluent_kafka import Consumer
 from src.util import Config
 from src.util.logger import setup_logger
 
@@ -33,10 +33,11 @@ def poll_message(consumer, timeout=1.0):
     msg = consumer.poll(timeout=timeout)
     if msg is None:
         return None
-    if msg.error():
-        if msg.error().code() == KafkaError._PARTITION_EOF:
-            # End of partition event
-            logger.error(f"Consumer error (partition EOF): {msg.error()}")
+
+    err = msg.error()
+    if err is not None:
+        if err.name() == 'PARTITION_EOF':
+            logger.debug(f"End of partition reached: {err}")
             return None
         logger.error(f"Consumer error: {msg.error()}")
         return None

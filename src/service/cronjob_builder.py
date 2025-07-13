@@ -1,4 +1,8 @@
 import yaml
+from confluent_kafka import Producer
+from src.util.logger import setup_logger
+
+logger = setup_logger('cronjob_builder')
 
 def frequency_to_cron(frequency: str) -> str:
     """
@@ -66,3 +70,16 @@ def generate_cronjob_manifest(config: dict) -> str:
         }
     }
     return yaml.dump(cronjob, sort_keys=False)
+
+def send_to_job_orchestrator(job: str, producer: Producer, topic: str):
+    """
+    Send the job manifest to the job orchestrator via Kafka.
+    """
+    try:
+        producer.produce(topic, value=job.encode('utf-8'))
+        producer.flush()
+        logger.info(f"Job sent to topic {topic}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send job to Kafka: {e}")
+        return False
